@@ -1,0 +1,44 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <RootNamespace>Fragment_Launcher</RootNamespace>
+    <UseWindowsForms>true</UseWindowsForms>
+    <StartupObject>Fragment_Launcher.Program</StartupObject>
+    <ApplicationIcon>oh_no_melon_vector_new.ico</ApplicationIcon>
+    <Authors>vector</Authors>
+    <Company>TelliPatch Team</Company>
+    <Product>.hack//fragment Launcher</Product>
+    <PackageId>.hack//fragment Launcher</PackageId>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Update="info.Designer.cs">
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>info.settings</DependentUpon>
+    </Compile>
+    <Compile Update="Properties\Resources.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Update="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="info.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>info.Designer.cs</LastGenOutput>
+    </None>
+  </ItemGroup>
+
+</Project>
