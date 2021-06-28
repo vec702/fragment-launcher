@@ -162,19 +162,19 @@
             this.saveToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("saveToolStripMenuItem.Image")));
             this.saveToolStripMenuItem.ImageTransparentColor = System.Drawing.Color.Magenta;
             this.saveToolStripMenuItem.Name = "saveToolStripMenuItem";
-            this.saveToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.S)));
-            this.saveToolStripMenuItem.Size = new System.Drawing.Size(154, 24);
+            this.saveToolStripMenuItem.ShowShortcutKeys = false;
+            this.saveToolStripMenuItem.Size = new System.Drawing.Size(99, 24);
             this.saveToolStripMenuItem.Text = "&Save";
             // 
             // toolStripSeparator1
             // 
             this.toolStripSeparator1.Name = "toolStripSeparator1";
-            this.toolStripSeparator1.Size = new System.Drawing.Size(151, 6);
+            this.toolStripSeparator1.Size = new System.Drawing.Size(96, 6);
             // 
             // exitToolStripMenuItem
             // 
             this.exitToolStripMenuItem.Name = "exitToolStripMenuItem";
-            this.exitToolStripMenuItem.Size = new System.Drawing.Size(154, 24);
+            this.exitToolStripMenuItem.Size = new System.Drawing.Size(99, 24);
             this.exitToolStripMenuItem.Text = "E&xit";
             // 
             // toolsToolStripMenuItem

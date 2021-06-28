@@ -12,6 +12,8 @@ namespace Fragment_Launcher
     {
 
         private string patchReleaseDate = string.Empty;
+        private bool reading = false;
+        Timer timer = new Timer();
 
         public MainWindow()
         {
@@ -40,15 +42,21 @@ namespace Fragment_Launcher
             {
                 md5hash.Text = get_MD5Hash(isoFilePath.Text);
             }
+            
+            timer.Tick += new EventHandler(checkLauncherStatus);
+            timer.Interval = 3000;
+            timer.Start();
         }
 
         #region General Functions
+
         private bool IsFileLocked(FileInfo file)
         {
             FileStream stream = null;
 
             try
             {
+                reading = true;
                 stream = file.Open(FileMode.Open, FileAccess.ReadWrite, FileShare.None);
             }
 
@@ -61,19 +69,35 @@ namespace Fragment_Launcher
             {
                 if (stream != null)
                     stream.Close();
+
+                reading = false;
             }
 
             return false;
         }
 
+        private void checkLauncherStatus(Object sender, EventArgs e)
+        {
+            if(!reading)
+            {
+                updateStatusMessage("Launcher ready.");
+            } else
+            {
+                updateStatusMessage("Please wait...");
+            }
+        }
+
         private string get_MD5Hash(string filePath)
         {
+            updateStatusMessage("Calculating MD5 hash code...");
+            reading = true;
             using (var md5 = MD5.Create())
             {
                 using (var stream = File.OpenRead(filePath))
                 {
                     var hash = md5.ComputeHash(stream);
                     string final_checksum = BitConverter.ToString(hash).Replace("-", "");
+                    reading = false;
                     return final_checksum;
                 }
             }
@@ -278,6 +302,7 @@ namespace Fragment_Launcher
         #endregion Click Button Functions
 
         #region Menu / Status Bar Functions
+
         private void menuStrip1_ItemClicked(object sender, ToolStripItemClickedEventArgs e)
         {
             saveToolStripMenuItem.Click += new EventHandler(saveToolStripMenuItem_Click);

@@ -52,7 +52,7 @@
             this.richTextBox1.Size = new System.Drawing.Size(297, 139);
             this.richTextBox1.TabIndex = 1;
             this.richTextBox1.Text = "Fragment Launcher made by vector.\nThanks to Telli, Dau, Emuz, Enlike, Nyao, RLSti" +
-    "ne, Vi, and Zackmon for making this project possible.\n\nSpecial thanks to the Net" +
+    "ne, Vi Ness, and Zackmon for their help in making this project possible.\n\nSpecial thanks to the Net" +
     "slum Community <3";
             // 
             // About
