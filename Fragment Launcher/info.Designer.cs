@@ -12,7 +12,7 @@ namespace Fragment_Launcher {
     
     
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.VisualStudio.Editors.SettingsDesigner.SettingsSingleFileGenerator", "16.7.0.0")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.VisualStudio.Editors.SettingsDesigner.SettingsSingleFileGenerator", "16.10.0.0")]
     internal sealed partial class info : global::System.Configuration.ApplicationSettingsBase {
         
         private static info defaultInstance = ((info)(global::System.Configuration.ApplicationSettingsBase.Synchronized(new info())));
@@ -37,9 +37,10 @@ namespace Fragment_Launcher {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        public global::System.DateTime lastCheck {
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string lastCheck {
             get {
-                return ((global::System.DateTime)(this["lastCheck"]));
+                return ((string)(this["lastCheck"]));
             }
             set {
                 this["lastCheck"] = value;
@@ -67,6 +68,30 @@ namespace Fragment_Launcher {
             }
             set {
                 this["pcsx2Folder"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public string viGithubVersion {
+            get {
+                return ((string)(this["viGithubVersion"]));
+            }
+            set {
+                this["viGithubVersion"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("v0.0.0")]
+        public string aliceGithubVersion {
+            get {
+                return ((string)(this["aliceGithubVersion"]));
+            }
+            set {
+                this["aliceGithubVersion"] = value;
             }
         }
     }

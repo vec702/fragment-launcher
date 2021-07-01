@@ -1,4 +1,4 @@
-﻿using Microsoft.VisualBasic.FileIO;
+﻿using Newtonsoft.Json;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -11,9 +11,20 @@ namespace Fragment_Launcher
     public partial class MainWindow : Form
     {
 
-        private string patchReleaseDate = string.Empty;
+        #region Declarations
         private bool reading = false;
-        Timer timer = new Timer();
+
+        private string lastCheckedForNewVersion = string.Empty;
+        private string telliPatchVersion = string.Empty;
+        private string aliceGithubTag = "v0.0.0";
+        private string viGithubTag = "v0.0.0";
+
+        private const string aliceGithubReleaseLink = "https://api.github.com/repos/Tellilum/.hack-fragment-Definitive-Translation/releases/latest";
+        private const string viGithubReleaseLink = "https://api.github.com/repos/Finzenku/FragmentUpdater/releases/latest";
+        private const string JP_ISO_MD5 = "94C82040BF4BB99500EB557A3C0FBB15";
+        
+        private readonly Timer timer = new Timer();
+        #endregion
 
         public MainWindow()
         {
@@ -27,6 +38,9 @@ namespace Fragment_Launcher
             isoFilePath.Text = info.Default.isoFilePath.ToString();
             telliToolStripMenuItem.ToolTipText = info.Default.telliFolder.ToString();
             pcsx2StripMenuItem1.ToolTipText = info.Default.pcsx2Folder.ToString();
+            lastCheckedForNewVersion = info.Default.lastCheck.ToString();
+            aliceGithubTag = info.Default.aliceGithubVersion;
+            viGithubTag = info.Default.viGithubVersion;
 
             if (telliToolStripMenuItem.ToolTipText != string.Empty)
             {
@@ -40,11 +54,11 @@ namespace Fragment_Launcher
 
             if (isoFilePath.Text != string.Empty)
             {
-                md5hash.Text = get_MD5Hash(isoFilePath.Text);
+                md5hash.Text = Get_MD5Hash(isoFilePath.Text);
             }
             
-            timer.Tick += new EventHandler(checkLauncherStatus);
-            timer.Interval = 3000;
+            timer.Tick += new EventHandler(CheckLauncherStatus);
+            timer.Interval = 5000;
             timer.Start();
         }
 
@@ -76,20 +90,55 @@ namespace Fragment_Launcher
             return false;
         }
 
-        private void checkLauncherStatus(Object sender, EventArgs e)
+        private void CheckLauncherStatus(Object sender, EventArgs e)
         {
             if(!reading)
             {
-                updateStatusMessage("Launcher ready.");
-            } else
+                UpdateStatusMessage("Launcher ready.");
+            }
+            else
             {
-                updateStatusMessage("Please wait...");
+                UpdateStatusMessage("Please wait...");
             }
         }
 
-        private string get_MD5Hash(string filePath)
+        private void Log(string message)
         {
-            updateStatusMessage("Calculating MD5 hash code...");
+            dialogBox.Text += message + "\n";
+        }
+
+        private string Get_TelliPatchVersion()
+        { 
+            telliPatchVersion = File.ReadAllText(@telliToolStripMenuItem.ToolTipText + "\\VERSION");
+            return telliPatchVersion;
+        }
+
+        private void SaveSettings()
+        {
+            info.Default.isoFilePath = isoFilePath.Text;
+            info.Default.telliFolder = telliToolStripMenuItem.ToolTipText;
+            info.Default.pcsx2Folder = pcsx2StripMenuItem1.ToolTipText;
+            info.Default.lastCheck = lastCheckedForNewVersion;
+            info.Default.aliceGithubVersion = aliceGithubTag;
+            info.Default.viGithubVersion = viGithubTag;
+            info.Default.Save();
+        }
+
+        private void UpdateProgress(int number)
+        {
+            progressBar1.Value = number;
+            progressBar1.Update();
+        }
+
+        private void UpdateStatusMessage(string message)
+        {
+            toolStripStatusLabel1.Text = message;
+            statusStrip1.Update();
+        }
+
+        private string Get_MD5Hash(string filePath)
+        {
+            UpdateStatusMessage("Calculating MD5 hash code...");
             reading = true;
             using (var md5 = MD5.Create())
             {
@@ -103,151 +152,365 @@ namespace Fragment_Launcher
             }
         }
 
-        private void saveSettings()
+        private bool IsFragmentLoaded()
         {
-            info.Default.isoFilePath = isoFilePath.Text;
-            info.Default.telliFolder = telliToolStripMenuItem.ToolTipText;
-            info.Default.pcsx2Folder = pcsx2StripMenuItem1.ToolTipText;
-            info.Default.Save();
+            bool IS_SLPS255_27_FOUND = false;
 
-            updateStatusMessage("Settings saved.");
-        }
+            Log("Mounting ISO to check for .hack//fragment ID file: \"SLPS_255.27\"");
 
-        private void updateProgress(int number)
-        {
-            progressBar1.Value = number;
-            progressBar1.Update();
-        }
-
-        private void updateStatusMessage(string message)
-        {
-            toolStripStatusLabel1.Text = message;
-            statusStrip1.Update();
-        }
-
-        private bool needToUpdatePatch()
-        {
-            DateTime lastModified = File.GetLastWriteTime(isoFilePath.Text);
-            DateTime patchUploaded = DateTime.Parse(patchReleaseDate);
-
-            if(lastModified.CompareTo(patchUploaded) == -1)
+            // mount the iso
+            var mountIso = new Process
             {
-                return true;
-            } else
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = "PowerShell.exe",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    CreateNoWindow = false,
+                    WindowStyle = ProcessWindowStyle.Minimized,
+                    Arguments = "Mount-DiskImage -ImagePath '" + isoFilePath.Text + "'"
+                }
+            };
+
+            mountIso.Start();
+
+            while(!mountIso.HasExited)
             {
-                return false;
+                Application.DoEvents();
+            }
+            
+            // check all mounted drives for file SLPS_255.27 in the root
+            // this is to confirm it's .hack//fragment loaded into the launcher
+            DriveInfo[] AllDrives = DriveInfo.GetDrives();
+            foreach (DriveInfo d in AllDrives)
+            {
+                if (d.IsReady == true)
+                {
+                    if(!File.Exists(d.RootDirectory + "\\SLPS_255.27"))
+                    {
+                        IS_SLPS255_27_FOUND = false;
+                        continue;
+                    }
+                    else
+                    {
+                        IS_SLPS255_27_FOUND = true;
+                        break;
+                    }
+                }
+            }
+
+            // unmount the iso.
+            var unmountIso = new Process
+            {
+                StartInfo = new ProcessStartInfo   
+                {
+                    FileName = "PowerShell.exe",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    CreateNoWindow = false,
+                    WindowStyle = ProcessWindowStyle.Minimized,
+                    Arguments = "Dismount-DiskImage -ImagePath '" + isoFilePath.Text + "'"
+                }
+            };
+
+            unmountIso.Start();
+
+            while(!unmountIso.HasExited)
+            {
+                Application.DoEvents();
+            }
+
+            return IS_SLPS255_27_FOUND;
+        }
+
+        private void CheckForUpdate()
+        {
+            reading = true;
+            if (!IsFragmentLoaded())
+            {
+                Log("Could not determine whether or not .hack//fragment is loaded. Please try another ISO.");
+            }
+            else
+            {
+                UpdateProgress(0);
+
+                if (!File.Exists(@telliToolStripMenuItem.ToolTipText + "\\VERSION"))
+                {
+                    Log("Your version of TelliPatch is too far out-of-date to use with this launcher!");
+                    Log("Download a newer version from the Netslum BBS. Link: https://bbs.dothackers.org/viewtopic.php?f=6&t=80");
+                }
+                else
+                {
+                    string pathToViExe = @telliToolStripMenuItem.ToolTipText + "\\bin\\vis_patcher.exe";
+
+                    DateTime vi_lastModified = File.GetLastWriteTime(pathToViExe);
+
+                    if (lastCheckedForNewVersion == string.Empty)
+                    {
+                        lastCheckedForNewVersion = DateTime.MinValue.ToString();
+                    }
+
+                    string aliceTagCleaned = Get_GithubTag(aliceGithubReleaseLink).Substring(1).Replace(".", string.Empty);
+                    string aliceLastSavedData = aliceGithubTag.Substring(1).Replace(".", string.Empty);
+
+                    string viLastSavedData = viGithubTag.Substring(1).Replace(".", string.Empty);
+                    string viTagCleaned = Get_GithubTag(viGithubReleaseLink).Substring(1).Replace(".", string.Empty);
+
+                    /*
+                     * We need to patch if any of the following criteria are met:
+                     * 1. the last time we ran a check was before a new telli release
+                     * 2. the last time we ran a check was before a new vi release
+                     * 3. the iso loaded was created before a new telli release
+                     * 4. the iso loaded was created before a new vi release
+                     * 5. saved alice tag is older than alice's new tag_name
+                     * 6. saved vi tag is older than vi's new tag_name
+                     * 7. the iso loaded is the original jp disc
+                     */
+                    if (DateTime.Compare(DateTime.Parse(lastCheckedForNewVersion), GetLastRelease(aliceGithubReleaseLink)) == -1 ||
+                        DateTime.Compare(vi_lastModified, GetLastRelease(viGithubReleaseLink)) == -1 ||
+                        DateTime.Compare(File.GetCreationTime(isoFilePath.Text), GetLastRelease(aliceGithubReleaseLink)) == -1 ||
+                        DateTime.Compare(File.GetCreationTime(isoFilePath.Text), GetLastRelease(viGithubReleaseLink)) == -1 ||
+                        Convert.ToInt32(aliceLastSavedData) < Convert.ToInt32(aliceTagCleaned) || /*Convert.ToInt32(viLastSavedData) < Convert.ToInt32(viTagCleaned) || uncomment when vi releases properly */
+                        md5hash.Text == JP_ISO_MD5)
+                    {
+                        DialogResult patchNow = MessageBox.Show("A new version was found. Would you like to patch now?", ".hack//fragment launcher", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                        if (patchNow == DialogResult.Yes)
+                        {
+                            RunTelliPatch();
+                        }
+                        else if (patchNow == DialogResult.No)
+                        {
+                            UpdateProgress(100);
+                        }
+                    }
+                    else
+                    {
+                        Log("You have the latest version.");
+                        UpdateCheckMessage();
+                        UpdateProgress(100);
+                    }
+                }
+                reading = false;
             }
         }
+
+        private void RunTelliPatch()
+        {
+            bool finished_checking = false;
+            if(!File.Exists(@telliToolStripMenuItem.ToolTipText + "\\fragment.ISO") && md5hash.Text != JP_ISO_MD5)
+            {
+                Log("No ISO found in TelliPatch directory. Cancelling patch...");
+                return;
+            }
+            
+            if(!File.Exists(@telliToolStripMenuItem.ToolTipText + "\\fragment.ISO") && md5hash.Text == JP_ISO_MD5)
+            {
+                Log("An original JP ISO is loaded into the launcher. Copying it over for use...");
+                File.Copy(isoFilePath.Text, @telliToolStripMenuItem.ToolTipText + "\\fragment.ISO");
+            }
+
+            UpdateProgress(10);
+
+            if (IsFileLocked(new FileInfo(@telliToolStripMenuItem.ToolTipText + "\\fragment.ISO")))
+            {
+                // wait until it's done copying over...
+            }
+            else
+            {
+                var process = new Process
+                {
+                StartInfo = new ProcessStartInfo
+                    {
+                        FileName = @telliToolStripMenuItem.ToolTipText + "\\Apply Patch.bat",
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true
+                    }
+                };
+
+                var lineCount = 0;
+                process.OutputDataReceived += new DataReceivedEventHandler((sender, e) =>
+                {
+                    // Prepend line numbers to each line of the output.
+                    if (!String.IsNullOrEmpty(e.Data))
+                    {
+                        lineCount++;
+                        if (dialogBox.InvokeRequired)
+                        {
+                            Invoke((MethodInvoker)(() => dialogBox.AppendText(Environment.NewLine + e.Data)));
+                        }
+                        else
+                        {
+                            dialogBox.AppendText(Environment.NewLine + e.Data);
+                        }
+                    }
+                });
+
+                process.Start();
+                process.BeginOutputReadLine();
+
+                while (!process.HasExited)
+                {
+                    if(Process.GetProcessesByName("bsdtar").Length != 0)
+                    {
+                        UpdateProgress(20);
+                    }
+                    if (Process.GetProcessesByName("xdelta").Length != 0)
+                    {
+                        UpdateProgress(35);
+                    }
+
+                    if(Process.GetProcessesByName("fragment_patcher").Length != 0)
+                    {
+                        UpdateProgress(50);
+                    }
+                    
+                    if(Process.GetProcessesByName("imgburn").Length != 0)
+                    {
+                        UpdateProgress(65);
+                    }
+
+                    if(Process.GetProcessesByName("vis_patcher").Length != 0)
+                    {
+                        UpdateProgress(80);
+                    }
+
+                    reading = true;
+                    Application.DoEvents();
+                }
+
+                if(process.HasExited)
+                {
+                    UpdateProgress(100);
+
+                    reading = false;
+                    string newIso = @telliToolStripMenuItem.ToolTipText + "\\dotHack Fragment (" + Get_TelliPatchVersion() + ").ISO";
+                    isoFilePath.Text = newIso;
+                    md5hash.Text = Get_MD5Hash(newIso);
+                    finished_checking = true;
+                }
+            }
+
+            if(finished_checking)
+            {
+                UpdateCheckMessage();
+            }
+        }
+
+        private void UpdateCheckMessage()
+        {
+            UpdateStatusMessage("Last Checked: " + DateTime.Now.ToString());
+            lastCheckedForNewVersion = DateTime.Now.ToString();
+            SaveSettings();
+        }
+
+        private string Get_GithubTag(string repo)
+        {
+            string tag = "v0.0.0";
+            HttpWebRequest request = WebRequest.Create(repo) as HttpWebRequest;
+            if (request != null)
+            {
+                request.Method = "GET";
+                request.UserAgent = "Anything";
+                request.ServicePoint.Expect100Continue = false;
+
+                try
+                {
+                    using (StreamReader response = new StreamReader(request.GetResponse().GetResponseStream()))
+                    {
+
+                        string reader = response.ReadLine();
+                        switch (repo)
+                        {
+                            case aliceGithubReleaseLink:
+                                Release.Root aliceRoot = JsonConvert.DeserializeObject<Release.Root>(reader);
+                                aliceGithubTag = aliceRoot.tag_name;
+                                return aliceRoot.tag_name;
+                            case viGithubReleaseLink:
+                                Release.Root viRoot = JsonConvert.DeserializeObject<Release.Root>(reader);
+                                viGithubTag = viRoot.tag_name;
+                                return viRoot.tag_name;
+                            default:
+                                return tag;
+                        }
+                    }
+                }
+                catch
+                {
+                    return tag;
+                }
+            }
+            else
+            {
+                return tag;
+            }
+        }
+
+        private DateTime GetLastRelease(string repo)
+        {
+            HttpWebRequest request = WebRequest.Create(repo) as HttpWebRequest;
+            if (request != null)
+            {
+                request.Method = "GET";
+                request.UserAgent = "Anything";
+                request.ServicePoint.Expect100Continue = false;
+
+                try
+                {
+                    using (StreamReader response = new StreamReader(request.GetResponse().GetResponseStream()))
+                    {
+
+                        string reader = response.ReadLine();
+                        switch (repo)
+                        {
+                            case aliceGithubReleaseLink:
+                                Release.Root aliceRoot = JsonConvert.DeserializeObject<Release.Root>(reader);
+                                return aliceRoot.published_at;
+                            case viGithubReleaseLink:
+                                Release.Root viRoot = JsonConvert.DeserializeObject<Release.Root>(reader);
+                                return viRoot.published_at;
+                            default:
+                                return DateTime.MinValue;
+                        }
+                    }
+                }
+                catch
+                {
+                    return DateTime.MinValue;
+                }
+            }
+            else
+            {
+                return DateTime.MinValue;
+            }
+        }
+
+        private void dialogBox_TextChanged(object sender, EventArgs e)
+        {
+            dialogBox.ScrollToCaret();
+        }
+
         #endregion
 
         #region Click Button Functions
 
         private void checkNewVersion_Click(object sender, EventArgs e)
         {
-            updateProgress(0);
+            UpdateProgress(0);
 
             if (isoFilePath.Text == string.Empty)
             {
                 MessageBox.Show("Please select a .hack//fragment ISO before checking for a new version.", ".hack//fragment launcher - error");
 
-            } else if (telliToolStripMenuItem.ToolTipText == string.Empty) {
+            }
+            else if (telliToolStripMenuItem.ToolTipText == string.Empty) {
                 MessageBox.Show("No TelliPatch folder found.\nUnder the Tools menu, please select the folder where TelliPatch's 'Apply Patch.bat' is stored.", ".hack//fragment launcher - error");
 
-            } else
+            }
+            else
             {
                 dialogBox.Text = ""; // clear out textbox.
-                dialogBox.Text += "Checking for new version...\n";
-
-                updateProgress(20);
-
-                HttpWebRequest req = (HttpWebRequest)WebRequest.Create("https://docs.google.com/spreadsheets/d/e/2PACX-1vTz5vYBFwyBfDUb5mLfq0OoLjuUw3pnybi7I-2uyFkGppveCe_fVz0pTXWRtGbc7Si_-F-xM4H89sU-/pub?gid=0&single=true&output=csv");
-                HttpWebResponse resp = (HttpWebResponse)req.GetResponse();
-
-                using (TextFieldParser csvParser = new TextFieldParser(resp.GetResponseStream()))
-                {
-                    csvParser.SetDelimiters(new string[] { "," });
-
-                    updateProgress(40);
-
-                    while (!csvParser.EndOfData)
-                    {
-                        string[] fields = csvParser.ReadFields();
-                        string checksum = fields[0];
-                        string releaseVersion = fields[1];
-                        string releaseDate = fields[2];
-                        string vi_checksum = fields[3];
-
-                        patchReleaseDate = releaseDate;
-
-                        dialogBox.Text += "Found version " + releaseVersion + ", released on " + releaseDate + ".\n";
-
-                        // check bin\vis_patcher.exe & whether or not we need to update that first.
-                        if (!File.Exists(@telliToolStripMenuItem.ToolTipText + "\\bin\\vis_patcher.exe") || vi_checksum != get_MD5Hash(@telliToolStripMenuItem.ToolTipText + "\\bin\\vis_patcher.exe"))
-                        {
-                            dialogBox.Text += "Your version of TelliPatch is too far out-of-date to use with this launcher!\nYou will need download a newer version from the Netslum BBS. Link: https://bbs.dothackers.org/viewtopic.php?f=6&t=80 \n";
-                            updateProgress(0);
-                        }
-
-                        else
-                        {
-
-                            dialogBox.Text += "Comparing loaded ISO's last modified time to see if an update is required...\n";
-
-                            if (!needToUpdatePatch())
-                            {
-                                dialogBox.Text += "The latest version is installed. Please enjoy \"THE WORLD.\"\n";
-                            }
-                            else
-                            {
-                                if (!File.Exists(@telliToolStripMenuItem.ToolTipText + "\\fragment.ISO"))
-                                {
-                                    // if it's the unmodified JP ISO
-                                    if (md5hash.Text == "94C82040BF4BB99500EB557A3C0FBB15")
-                                    {
-                                        dialogBox.Text += "No ISO detected in TelliPatch folder. Raw JP ISO found in Launcher. Copying it over...\n";
-                                        File.Copy(isoFilePath.Text, @telliToolStripMenuItem.ToolTipText + "\\fragment.ISO");
-
-                                        updateProgress(60);
-                                    }
-                                }
-
-                                while (IsFileLocked(new FileInfo(@telliToolStripMenuItem.ToolTipText + "\\fragment.ISO")))
-                                {
-                                    updateProgress(80);
-                                }
-
-                                updateProgress(80);
-
-                                dialogBox.Text += "A new version has been found. Now running TelliPatch...\n";
-
-                                updateStatusMessage("TelliPatch is running... Please wait.");
-
-                                var process = new Process
-                                {
-                                    StartInfo = new ProcessStartInfo
-                                    {
-                                        FileName = @telliToolStripMenuItem.ToolTipText + "\\Apply Patch.bat"
-                                    }
-                                };
-
-                                process.Start();
-                                process.WaitForExit();
-
-                                dialogBox.Text += "The latest version of TelliPatch has been applied to your .hack//fragment ISO.\n";
-                                dialogBox.Text += "Please enjoy \"THE WORLD.\"";
-
-                                isoFilePath.Text = @telliToolStripMenuItem.ToolTipText + "\\dotHack Fragment (1.0).iSO";
-                                md5hash.Text = get_MD5Hash(@telliToolStripMenuItem.ToolTipText + "\\dotHack Fragment (1.0).iSO");
-
-                                DateTime lastModified = File.GetLastWriteTime(isoFilePath.Text);
-                                updateStatusMessage("Last Checked: " + lastModified.ToString());
-                            }
-                        }
-                        updateProgress(100);
-                    }
-                        
-                }
-
+                Log("Checking for new version...");
+                CheckForUpdate();
             }
         }
 
@@ -255,21 +518,19 @@ namespace Fragment_Launcher
         {
             var filePath = string.Empty;
 
-            using (OpenFileDialog openFileDialog = new OpenFileDialog())
+            using OpenFileDialog openFileDialog = new OpenFileDialog();
+            openFileDialog.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            openFileDialog.Filter = "ISO files (*.iso)|*.iso|All files (*.*)|*.*";
+            openFileDialog.FilterIndex = 1;
+            openFileDialog.RestoreDirectory = true;
+
+            if (openFileDialog.ShowDialog() == DialogResult.OK)
             {
-                openFileDialog.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-                openFileDialog.Filter = "ISO files (*.iso)|*.iso|All files (*.*)|*.*";
-                openFileDialog.FilterIndex = 1;
-                openFileDialog.RestoreDirectory = true;
+                //Get the path of specified file
+                filePath = openFileDialog.FileName;
 
-                if (openFileDialog.ShowDialog() == DialogResult.OK)
-                {
-                    //Get the path of specified file
-                    filePath = openFileDialog.FileName;
-
-                    isoFilePath.Text = filePath.ToString();
-                    md5hash.Text = get_MD5Hash(filePath);
-                }
+                isoFilePath.Text = filePath.ToString();
+                md5hash.Text = Get_MD5Hash(filePath);
             }
         }
 
@@ -363,13 +624,13 @@ namespace Fragment_Launcher
 
         private void saveToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            saveSettings();
+            SaveSettings();
         }
 
         private void exitToolStripMenuItem_Click(object sender, EventArgs e)
         {
             // save before closing
-            saveSettings();
+            SaveSettings();
             Close();
         }
 

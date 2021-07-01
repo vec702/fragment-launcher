@@ -5,7 +5,7 @@
     <Setting Name="isoFilePath" Type="System.String" Scope="User">
       <Value Profile="(Default)" />
     </Setting>
-    <Setting Name="lastCheck" Type="System.DateTime" Scope="User">
+    <Setting Name="lastCheck" Type="System.String" Scope="User">
       <Value Profile="(Default)" />
     </Setting>
     <Setting Name="telliFolder" Type="System.String" Scope="User">
@@ -13,6 +13,12 @@
     </Setting>
     <Setting Name="pcsx2Folder" Type="System.String" Scope="User">
       <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="viGithubVersion" Type="System.String" Scope="User">
+      <Value Profile="(Default)">0</Value>
+    </Setting>
+    <Setting Name="aliceGithubVersion" Type="System.String" Scope="User">
+      <Value Profile="(Default)">v0.0.0</Value>
     </Setting>
   </Settings>
 </SettingsFile>

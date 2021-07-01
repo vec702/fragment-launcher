@@ -52,8 +52,8 @@
             this.richTextBox1.Size = new System.Drawing.Size(297, 139);
             this.richTextBox1.TabIndex = 1;
             this.richTextBox1.Text = "Fragment Launcher made by vector.\nThanks to Telli, Dau, Emuz, Enlike, Nyao, RLSti" +
-    "ne, Vi Ness, and Zackmon for their help in making this project possible.\n\nSpecial thanks to the Net" +
-    "slum Community <3";
+    "ne, Vi Ness, and Zackmon for their help in making this project possible.\n\nSpecia" +
+    "l thanks to the Netslum Community <3";
             // 
             // About
             // 
@@ -64,7 +64,10 @@
             this.Controls.Add(this.linkLabel1);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
+            this.MaximizeBox = false;
+            this.MinimizeBox = false;
             this.Name = "About";
+            this.ShowInTaskbar = false;
             this.Text = "About";
             this.Load += new System.EventHandler(this.About_Load);
             this.ResumeLayout(false);

@@ -1,4 +1,6 @@
-﻿namespace Fragment_Launcher
+﻿using System.Windows.Forms;
+
+namespace Fragment_Launcher
 {
     partial class MainWindow
     {
@@ -86,13 +88,14 @@
             // 
             // dialogBox
             // 
-            this.dialogBox.Enabled = false;
             this.dialogBox.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
             this.dialogBox.Location = new System.Drawing.Point(12, 248);
             this.dialogBox.Name = "dialogBox";
+            this.dialogBox.ReadOnly = true;
             this.dialogBox.Size = new System.Drawing.Size(530, 125);
             this.dialogBox.TabIndex = 2;
             this.dialogBox.Text = "";
+            this.dialogBox.TextChanged += new System.EventHandler(this.dialogBox_TextChanged);
             // 
             // chooseIso_Btn
             // 
@@ -244,7 +247,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 19F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.AutoSize = true;
+            this.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
             this.BackColor = System.Drawing.SystemColors.Control;
             this.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
             this.ClientSize = new System.Drawing.Size(554, 450);
@@ -262,8 +265,10 @@
             this.DoubleBuffered = true;
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
+            this.MaximizeBox = false;
+            this.MinimizeBox = false;
             this.Name = "MainWindow";
-            this.Text = ".hack//fragment | Netslum Launcher";
+            this.Text = ".hack//fragment Launcher";
             this.Load += new System.EventHandler(this.MainWindow_Load);
             this.menuStrip1.ResumeLayout(false);
             this.menuStrip1.PerformLayout();
