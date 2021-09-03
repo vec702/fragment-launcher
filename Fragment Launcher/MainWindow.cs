@@ -52,9 +52,14 @@ namespace Fragment_Launcher
                 pcsx2StripMenuItem1.Checked = true;
             }
 
-            if (isoFilePath.Text != string.Empty)
+            if (isoFilePath.Text != string.Empty && File.Exists(isoFilePath.Text))
             {
                 md5hash.Text = Get_MD5Hash(isoFilePath.Text);
+            }
+            else
+            {
+                md5hash.BackColor = System.Drawing.Color.LightCoral;
+                md5hash.Text = " error - select another ISO";
             }
             
             timer.Tick += new EventHandler(CheckLauncherStatus);
@@ -102,9 +107,17 @@ namespace Fragment_Launcher
             }
         }
 
-        private void Log(string message)
+        private void Log(string message, bool createNewline=true)
         {
-            dialogBox.Text += message + "\n";
+            switch(createNewline)
+            {
+                case true:
+                    dialogBox.Text += message + Environment.NewLine;
+                    break;
+                case false:
+                    dialogBox.Text += message;
+                    break;
+            }
         }
 
         private string Get_TelliPatchVersion()
@@ -140,6 +153,7 @@ namespace Fragment_Launcher
         {
             UpdateStatusMessage("Calculating MD5 hash code...");
             reading = true;
+
             using (var md5 = MD5.Create())
             {
                 using (var stream = File.OpenRead(filePath))
@@ -156,7 +170,7 @@ namespace Fragment_Launcher
         {
             bool IS_SLPS255_27_FOUND = false;
 
-            Log("Mounting ISO to check for .hack//fragment ID file: \"SLPS_255.27\"");
+            Log("Mounting ISO to check for .hack//fragment ID file: \"SLPS_255.27\" ... ", false);
 
             // mount the iso
             var mountIso = new Process
@@ -168,7 +182,7 @@ namespace Fragment_Launcher
                     RedirectStandardOutput = true,
                     CreateNoWindow = false,
                     WindowStyle = ProcessWindowStyle.Minimized,
-                    Arguments = "Mount-DiskImage -ImagePath '" + isoFilePath.Text + "'"
+                    Arguments = "-WindowStyle Hidden -Command Mount-DiskImage -ImagePath '" + isoFilePath.Text + "'"
                 }
             };
 
@@ -199,6 +213,9 @@ namespace Fragment_Launcher
                 }
             }
 
+            if (IS_SLPS255_27_FOUND) Log("found!");
+            else Log("not found!");
+
             // unmount the iso.
             var unmountIso = new Process
             {
@@ -209,7 +226,7 @@ namespace Fragment_Launcher
                     RedirectStandardOutput = true,
                     CreateNoWindow = false,
                     WindowStyle = ProcessWindowStyle.Minimized,
-                    Arguments = "Dismount-DiskImage -ImagePath '" + isoFilePath.Text + "'"
+                    Arguments = "-WindowStyle Hidden -Command Dismount-DiskImage -ImagePath '" + isoFilePath.Text + "'"
                 }
             };
 
@@ -229,6 +246,8 @@ namespace Fragment_Launcher
             if (!IsFragmentLoaded())
             {
                 Log("Could not determine whether or not .hack//fragment is loaded. Please try another ISO.");
+                reading = false;
+                return;
             }
             else
             {
@@ -267,9 +286,9 @@ namespace Fragment_Launcher
                      * 7. the iso loaded is the original jp disc
                      */
                     if (DateTime.Compare(DateTime.Parse(lastCheckedForNewVersion), GetLastRelease(aliceGithubReleaseLink)) == -1 ||
-                        DateTime.Compare(vi_lastModified, GetLastRelease(viGithubReleaseLink)) == -1 ||
-                        DateTime.Compare(File.GetCreationTime(isoFilePath.Text), GetLastRelease(aliceGithubReleaseLink)) == -1 ||
-                        DateTime.Compare(File.GetCreationTime(isoFilePath.Text), GetLastRelease(viGithubReleaseLink)) == -1 ||
+                        DateTime.Compare(File.GetLastWriteTime(isoFilePath.Text), GetLastRelease(aliceGithubReleaseLink)) == -1 ||
+                        //DateTime.Compare(vi_lastModified, GetLastRelease(viGithubReleaseLink)) == -1 ||
+                        // DateTime.Compare(File.GetCreationTime(isoFilePath.Text), GetLastRelease(viGithubReleaseLink)) == -1 ||
                         Convert.ToInt32(aliceLastSavedData) < Convert.ToInt32(aliceTagCleaned) || /*Convert.ToInt32(viLastSavedData) < Convert.ToInt32(viTagCleaned) || uncomment when vi releases properly */
                         md5hash.Text == JP_ISO_MD5)
                     {
@@ -306,7 +325,7 @@ namespace Fragment_Launcher
             if(!File.Exists(@telliToolStripMenuItem.ToolTipText + "\\fragment.ISO") && md5hash.Text == JP_ISO_MD5)
             {
                 Log("An original JP ISO is loaded into the launcher. Copying it over for use...");
-                File.Copy(isoFilePath.Text, @telliToolStripMenuItem.ToolTipText + "\\fragment.ISO");
+                File.Copy(@isoFilePath.Text, @telliToolStripMenuItem.ToolTipText + "\\fragment.ISO");
             }
 
             UpdateProgress(10);
@@ -317,6 +336,8 @@ namespace Fragment_Launcher
             }
             else
             {
+                Log("A command prompt window will open. Please do not close this until it the patch is complete.");
+
                 var process = new Process
                 {
                 StartInfo = new ProcessStartInfo
@@ -350,7 +371,13 @@ namespace Fragment_Launcher
 
                 while (!process.HasExited)
                 {
-                    if(Process.GetProcessesByName("bsdtar").Length != 0)
+                    string terminationString = "Your patched ISO is located at:";
+                    if (dialogBox.Text.Contains(terminationString, StringComparison.OrdinalIgnoreCase))
+                    {
+                        process.Kill();
+                    }
+
+                    if (Process.GetProcessesByName("bsdtar").Length != 0)
                     {
                         UpdateProgress(20);
                     }
@@ -531,6 +558,7 @@ namespace Fragment_Launcher
 
                 isoFilePath.Text = filePath.ToString();
                 md5hash.Text = Get_MD5Hash(filePath);
+                md5hash.BackColor = System.Drawing.Color.White;
             }
         }
 
@@ -618,8 +646,7 @@ namespace Fragment_Launcher
 
         private void aboutToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            About a = new About();
-            a.Show();
+            new About().Show();
         }
 
         private void saveToolStripMenuItem_Click(object sender, EventArgs e)
@@ -632,6 +659,15 @@ namespace Fragment_Launcher
             // save before closing
             SaveSettings();
             Close();
+        }
+
+        private void getTelliPatchToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "https://bbs.dothackers.org/viewtopic.php?f=6&t=80&p=262#p262",
+                UseShellExecute = true
+            });
         }
 
         #endregion Menu / Status Bar Functions

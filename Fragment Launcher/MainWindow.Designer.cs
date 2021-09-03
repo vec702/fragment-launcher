@@ -53,6 +53,8 @@ namespace Fragment_Launcher
             this.statusStrip1 = new System.Windows.Forms.StatusStrip();
             this.toolStripStatusLabel1 = new System.Windows.Forms.ToolStripStatusLabel();
             this.pictureBox1 = new System.Windows.Forms.PictureBox();
+            this.toolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
+            this.getTelliPatchToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1.SuspendLayout();
             this.statusStrip1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
@@ -60,20 +62,27 @@ namespace Fragment_Launcher
             // 
             // launchButton
             // 
-            this.launchButton.Location = new System.Drawing.Point(448, 379);
+            this.launchButton.BackColor = System.Drawing.Color.White;
+            this.launchButton.FlatAppearance.BorderColor = System.Drawing.Color.White;
+            this.launchButton.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
+            this.launchButton.Font = new System.Drawing.Font("Segoe UI", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            this.launchButton.Location = new System.Drawing.Point(452, 379);
             this.launchButton.Name = "launchButton";
-            this.launchButton.Size = new System.Drawing.Size(94, 46);
+            this.launchButton.Size = new System.Drawing.Size(90, 46);
             this.launchButton.TabIndex = 0;
             this.launchButton.Text = "Launch";
-            this.launchButton.UseVisualStyleBackColor = true;
+            this.launchButton.UseVisualStyleBackColor = false;
             this.launchButton.Click += new System.EventHandler(this.launchButton_Click);
             // 
             // checkNewVersion
             // 
-            this.checkNewVersion.BackColor = System.Drawing.SystemColors.ControlLight;
-            this.checkNewVersion.Location = new System.Drawing.Point(348, 379);
+            this.checkNewVersion.BackColor = System.Drawing.Color.White;
+            this.checkNewVersion.FlatAppearance.BorderColor = System.Drawing.Color.White;
+            this.checkNewVersion.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
+            this.checkNewVersion.Font = new System.Drawing.Font("Segoe UI", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            this.checkNewVersion.Location = new System.Drawing.Point(356, 379);
             this.checkNewVersion.Name = "checkNewVersion";
-            this.checkNewVersion.Size = new System.Drawing.Size(94, 46);
+            this.checkNewVersion.Size = new System.Drawing.Size(90, 46);
             this.checkNewVersion.TabIndex = 0;
             this.checkNewVersion.Text = "Check for New Version";
             this.checkNewVersion.UseVisualStyleBackColor = false;
@@ -83,11 +92,12 @@ namespace Fragment_Launcher
             // 
             this.progressBar1.Location = new System.Drawing.Point(12, 379);
             this.progressBar1.Name = "progressBar1";
-            this.progressBar1.Size = new System.Drawing.Size(330, 46);
+            this.progressBar1.Size = new System.Drawing.Size(338, 46);
             this.progressBar1.TabIndex = 1;
             // 
             // dialogBox
             // 
+            this.dialogBox.BackColor = System.Drawing.SystemColors.ControlLightLight;
             this.dialogBox.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
             this.dialogBox.Location = new System.Drawing.Point(12, 248);
             this.dialogBox.Name = "dialogBox";
@@ -99,20 +109,27 @@ namespace Fragment_Launcher
             // 
             // chooseIso_Btn
             // 
-            this.chooseIso_Btn.Location = new System.Drawing.Point(424, 183);
+            this.chooseIso_Btn.BackColor = System.Drawing.Color.White;
+            this.chooseIso_Btn.FlatAppearance.BorderColor = System.Drawing.Color.White;
+            this.chooseIso_Btn.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
+            this.chooseIso_Btn.Font = new System.Drawing.Font("Segoe UI", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            this.chooseIso_Btn.Location = new System.Drawing.Point(424, 187);
             this.chooseIso_Btn.Name = "chooseIso_Btn";
-            this.chooseIso_Btn.Size = new System.Drawing.Size(118, 27);
+            this.chooseIso_Btn.Size = new System.Drawing.Size(118, 23);
             this.chooseIso_Btn.TabIndex = 0;
             this.chooseIso_Btn.Text = "Select ISO";
-            this.chooseIso_Btn.UseVisualStyleBackColor = true;
+            this.chooseIso_Btn.UseVisualStyleBackColor = false;
             this.chooseIso_Btn.Click += new System.EventHandler(this.chooseIso_Btn_Click);
             // 
             // isoFilePath
             // 
-            this.isoFilePath.Enabled = false;
-            this.isoFilePath.Location = new System.Drawing.Point(12, 184);
+            this.isoFilePath.BackColor = System.Drawing.Color.White;
+            this.isoFilePath.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.isoFilePath.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            this.isoFilePath.Location = new System.Drawing.Point(12, 187);
             this.isoFilePath.Name = "isoFilePath";
-            this.isoFilePath.Size = new System.Drawing.Size(406, 26);
+            this.isoFilePath.ReadOnly = true;
+            this.isoFilePath.Size = new System.Drawing.Size(406, 23);
             this.isoFilePath.TabIndex = 4;
             // 
             // openFileDialog1
@@ -130,15 +147,17 @@ namespace Fragment_Launcher
             // 
             // md5hash
             // 
-            this.md5hash.Enabled = false;
+            this.md5hash.BackColor = System.Drawing.Color.White;
+            this.md5hash.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.md5hash.Location = new System.Drawing.Point(93, 216);
             this.md5hash.Name = "md5hash";
+            this.md5hash.ReadOnly = true;
             this.md5hash.Size = new System.Drawing.Size(449, 26);
             this.md5hash.TabIndex = 4;
             // 
             // menuStrip1
             // 
-            this.menuStrip1.BackColor = System.Drawing.SystemColors.Control;
+            this.menuStrip1.BackColor = System.Drawing.SystemColors.ButtonHighlight;
             this.menuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.fileToolStripMenuItem,
             this.toolsToolStripMenuItem,
@@ -204,7 +223,9 @@ namespace Fragment_Launcher
             // helpToolStripMenuItem
             // 
             this.helpToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.aboutToolStripMenuItem});
+            this.aboutToolStripMenuItem,
+            this.toolStripSeparator2,
+            this.getTelliPatchToolStripMenuItem});
             this.helpToolStripMenuItem.Name = "helpToolStripMenuItem";
             this.helpToolStripMenuItem.Size = new System.Drawing.Size(49, 23);
             this.helpToolStripMenuItem.Text = "&Help";
@@ -212,12 +233,12 @@ namespace Fragment_Launcher
             // aboutToolStripMenuItem
             // 
             this.aboutToolStripMenuItem.Name = "aboutToolStripMenuItem";
-            this.aboutToolStripMenuItem.Size = new System.Drawing.Size(125, 24);
+            this.aboutToolStripMenuItem.Size = new System.Drawing.Size(180, 24);
             this.aboutToolStripMenuItem.Text = "&About...";
             // 
             // statusStrip1
             // 
-            this.statusStrip1.BackColor = System.Drawing.SystemColors.Control;
+            this.statusStrip1.BackColor = System.Drawing.SystemColors.ButtonHighlight;
             this.statusStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.toolStripStatusLabel1});
             this.statusStrip1.Location = new System.Drawing.Point(0, 428);
@@ -243,12 +264,24 @@ namespace Fragment_Launcher
             this.pictureBox1.TabIndex = 8;
             this.pictureBox1.TabStop = false;
             // 
+            // toolStripSeparator2
+            // 
+            this.toolStripSeparator2.Name = "toolStripSeparator2";
+            this.toolStripSeparator2.Size = new System.Drawing.Size(177, 6);
+            // 
+            // getTelliPatchToolStripMenuItem
+            // 
+            this.getTelliPatchToolStripMenuItem.Name = "getTelliPatchToolStripMenuItem";
+            this.getTelliPatchToolStripMenuItem.Size = new System.Drawing.Size(180, 24);
+            this.getTelliPatchToolStripMenuItem.Text = "Get TelliPatch";
+            this.getTelliPatchToolStripMenuItem.Click += new System.EventHandler(this.getTelliPatchToolStripMenuItem_Click);
+            // 
             // MainWindow
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 19F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
-            this.BackColor = System.Drawing.SystemColors.Control;
+            this.BackColor = System.Drawing.Color.White;
             this.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
             this.ClientSize = new System.Drawing.Size(554, 450);
             this.Controls.Add(this.statusStrip1);
@@ -268,6 +301,7 @@ namespace Fragment_Launcher
             this.MaximizeBox = false;
             this.MinimizeBox = false;
             this.Name = "MainWindow";
+            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = ".hack//fragment Launcher";
             this.Load += new System.EventHandler(this.MainWindow_Load);
             this.menuStrip1.ResumeLayout(false);
@@ -304,6 +338,8 @@ namespace Fragment_Launcher
         private System.Windows.Forms.ToolStripStatusLabel toolStripStatusLabel1;
         private System.Windows.Forms.PictureBox pictureBox1;
         private System.Windows.Forms.ToolStripMenuItem pcsx2StripMenuItem1;
+        private ToolStripSeparator toolStripSeparator2;
+        private ToolStripMenuItem getTelliPatchToolStripMenuItem;
     }
 }
 
