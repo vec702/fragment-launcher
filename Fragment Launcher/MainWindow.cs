@@ -1,7 +1,9 @@
 ﻿using Newtonsoft.Json;
 using System;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Net;
 using System.Security.Cryptography;
 using System.Windows.Forms;
@@ -21,6 +23,7 @@ namespace Fragment_Launcher
 
         private const string aliceGithubReleaseLink = "https://api.github.com/repos/Tellilum/.hack-fragment-Definitive-Translation/releases/latest";
         private const string viGithubReleaseLink = "https://api.github.com/repos/Finzenku/FragmentUpdater/releases/latest";
+        private const string tellipatchDownloadLink = "https://github.com/robby-u/tellipatch/releases/download/Windows/tellipatch.zip";
         private const string JP_ISO_MD5 = "94C82040BF4BB99500EB557A3C0FBB15";
         
         private readonly Timer timer = new Timer();
@@ -60,6 +63,12 @@ namespace Fragment_Launcher
             {
                 md5hash.BackColor = System.Drawing.Color.LightCoral;
                 md5hash.Text = " error - select another ISO";
+            }
+
+            if(Get_TelliPatchVersion() != String.Empty)
+            {
+                getTelliPatchToolStripMenuItem.Checked = true;
+                getTelliPatchToolStripMenuItem.Enabled = false;
             }
             
             timer.Tick += new EventHandler(CheckLauncherStatus);
@@ -121,8 +130,18 @@ namespace Fragment_Launcher
         }
 
         private string Get_TelliPatchVersion()
-        { 
-            telliPatchVersion = File.ReadAllText(@telliToolStripMenuItem.ToolTipText + "\\VERSION");
+        {
+            string version = String.Empty;
+            try
+            {
+                version = File.ReadAllText(@telliToolStripMenuItem.ToolTipText + "\\VERSION");
+            }
+            catch (Exception)
+            {
+
+            }
+
+            telliPatchVersion = version;
             return telliPatchVersion;
         }
 
@@ -149,21 +168,65 @@ namespace Fragment_Launcher
             statusStrip1.Update();
         }
 
+        private void DownloadTellipatch()
+        {
+            using WebClient webClient = new WebClient();
+            try
+            {
+                webClient.Headers.Add("Accept: text/html, application/xhtml+xml, */*");
+                webClient.Headers.Add("User-Agent: Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; WOW64; Trident/5.0)");
+                webClient.DownloadFileAsync(new Uri(tellipatchDownloadLink), "tellipatch.zip");
+                webClient.DownloadFileCompleted += new AsyncCompletedEventHandler(CompleteTellipatchDownload);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
+        }
+
+        private void CompleteTellipatchDownload(object sender, AsyncCompletedEventArgs e)
+        {
+            ZipFile.ExtractToDirectory("tellipatch.zip", Directory.GetCurrentDirectory() + "\\tellipatch\\");
+
+            string newpath = Directory.GetCurrentDirectory() + "\\tellipatch\\";
+            info.Default.telliFolder = newpath;
+            telliToolStripMenuItem.ToolTipText = newpath;
+            telliToolStripMenuItem.Checked = true;
+
+            if (Get_TelliPatchVersion() != String.Empty)
+            {
+                getTelliPatchToolStripMenuItem.Checked = true;
+                getTelliPatchToolStripMenuItem.Enabled = false;
+            }
+
+            SaveSettings();
+
+            Log("Download complete. TelliPatch folder set to " + newpath);
+            statusStrip1.Update();
+        }
+
+        private void DeleteTellipatchDirectory()
+        {
+            var tellipatchDir = Directory.GetCurrentDirectory() + "\\tellipatch\\";
+
+            if (Directory.Exists(tellipatchDir))
+            {
+                // recursively delete tellipatch directory
+                Directory.Delete(tellipatchDir, true);
+            }
+        }
+
         private string Get_MD5Hash(string filePath)
         {
             UpdateStatusMessage("Calculating MD5 hash code...");
             reading = true;
 
-            using (var md5 = MD5.Create())
-            {
-                using (var stream = File.OpenRead(filePath))
-                {
-                    var hash = md5.ComputeHash(stream);
-                    string final_checksum = BitConverter.ToString(hash).Replace("-", "");
-                    reading = false;
-                    return final_checksum;
-                }
-            }
+            using var md5 = MD5.Create();
+            using var stream = File.OpenRead(filePath);
+            var hash = md5.ComputeHash(stream);
+            string final_checksum = BitConverter.ToString(hash).Replace("-", "");
+            reading = false;
+            return final_checksum;
         }
 
         private bool IsFragmentLoaded()
@@ -269,17 +332,17 @@ namespace Fragment_Launcher
                         lastCheckedForNewVersion = DateTime.MinValue.ToString();
                     }
 
-                    string aliceTagCleaned = Get_GithubTag(aliceGithubReleaseLink).Substring(1).Replace(".", string.Empty);
-                    string aliceLastSavedData = aliceGithubTag.Substring(1).Replace(".", string.Empty);
+                    string aliceTagCleaned = Get_GithubTag(aliceGithubReleaseLink)[1..].Replace(".", string.Empty);
+                    string aliceLastSavedData = aliceGithubTag[1..].Replace(".", string.Empty);
 
-                    string viLastSavedData = viGithubTag.Substring(1).Replace(".", string.Empty);
-                    string viTagCleaned = Get_GithubTag(viGithubReleaseLink).Substring(1).Replace(".", string.Empty);
+                    string viLastSavedData = viGithubTag[1..].Replace(".", string.Empty);
+                    string viTagCleaned = Get_GithubTag(viGithubReleaseLink)[1..].Replace(".", string.Empty);
 
                     /*
                      * We need to patch if any of the following criteria are met:
-                     * 1. the last time we ran a check was before a new telli release
+                     * 1. the last time we ran a check was before a new alice release
                      * 2. the last time we ran a check was before a new vi release
-                     * 3. the iso loaded was created before a new telli release
+                     * 3. the iso loaded was created before a new alice release
                      * 4. the iso loaded was created before a new vi release
                      * 5. saved alice tag is older than alice's new tag_name
                      * 6. saved vi tag is older than vi's new tag_name
@@ -287,12 +350,13 @@ namespace Fragment_Launcher
                      */
                     if (DateTime.Compare(DateTime.Parse(lastCheckedForNewVersion), GetLastRelease(aliceGithubReleaseLink)) == -1 ||
                         DateTime.Compare(File.GetLastWriteTime(isoFilePath.Text), GetLastRelease(aliceGithubReleaseLink)) == -1 ||
-                        //DateTime.Compare(vi_lastModified, GetLastRelease(viGithubReleaseLink)) == -1 ||
-                        // DateTime.Compare(File.GetCreationTime(isoFilePath.Text), GetLastRelease(viGithubReleaseLink)) == -1 ||
-                        Convert.ToInt32(aliceLastSavedData) < Convert.ToInt32(aliceTagCleaned) || /*Convert.ToInt32(viLastSavedData) < Convert.ToInt32(viTagCleaned) || uncomment when vi releases properly */
+                        DateTime.Compare(DateTime.Parse(lastCheckedForNewVersion), GetLastRelease(viGithubReleaseLink)) == -1 ||
+                        DateTime.Compare(File.GetCreationTime(isoFilePath.Text), GetLastRelease(viGithubReleaseLink)) == -1 ||
+                        Convert.ToInt32(aliceLastSavedData) < Convert.ToInt32(aliceTagCleaned) ||
+                        Convert.ToInt32(viLastSavedData) < Convert.ToInt32(viTagCleaned) ||
                         md5hash.Text == JP_ISO_MD5)
                     {
-                        DialogResult patchNow = MessageBox.Show("A new version was found. Would you like to patch now?", ".hack//fragment launcher", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                        DialogResult patchNow = MessageBox.Show("A new version was found.\nWould you like to patch now?", ".hack//fragment launcher", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
                         if (patchNow == DialogResult.Yes)
                         {
                             RunTelliPatch();
@@ -357,11 +421,11 @@ namespace Fragment_Launcher
                         lineCount++;
                         if (dialogBox.InvokeRequired)
                         {
-                            Invoke((MethodInvoker)(() => dialogBox.AppendText(Environment.NewLine + e.Data)));
+                            if (!e.Data.Contains("Press any key to continue")) Invoke((MethodInvoker)(() => dialogBox.AppendText(Environment.NewLine + e.Data)));
                         }
                         else
                         {
-                            dialogBox.AppendText(Environment.NewLine + e.Data);
+                            if (!e.Data.Contains("Press any key to continue")) dialogBox.AppendText(Environment.NewLine + e.Data);
                         }
                     }
                 });
@@ -433,8 +497,7 @@ namespace Fragment_Launcher
         private string Get_GithubTag(string repo)
         {
             string tag = "v0.0.0";
-            HttpWebRequest request = WebRequest.Create(repo) as HttpWebRequest;
-            if (request != null)
+            if (WebRequest.Create(repo) is HttpWebRequest request)
             {
                 request.Method = "GET";
                 request.UserAgent = "Anything";
@@ -442,23 +505,21 @@ namespace Fragment_Launcher
 
                 try
                 {
-                    using (StreamReader response = new StreamReader(request.GetResponse().GetResponseStream()))
-                    {
+                    using StreamReader response = new StreamReader(request.GetResponse().GetResponseStream());
 
-                        string reader = response.ReadLine();
-                        switch (repo)
-                        {
-                            case aliceGithubReleaseLink:
-                                Release.Root aliceRoot = JsonConvert.DeserializeObject<Release.Root>(reader);
-                                aliceGithubTag = aliceRoot.tag_name;
-                                return aliceRoot.tag_name;
-                            case viGithubReleaseLink:
-                                Release.Root viRoot = JsonConvert.DeserializeObject<Release.Root>(reader);
-                                viGithubTag = viRoot.tag_name;
-                                return viRoot.tag_name;
-                            default:
-                                return tag;
-                        }
+                    string reader = response.ReadLine();
+                    switch (repo)
+                    {
+                        case aliceGithubReleaseLink:
+                            Release.Root aliceRoot = JsonConvert.DeserializeObject<Release.Root>(reader);
+                            aliceGithubTag = aliceRoot.tag_name;
+                            return aliceRoot.tag_name;
+                        case viGithubReleaseLink:
+                            Release.Root viRoot = JsonConvert.DeserializeObject<Release.Root>(reader);
+                            viGithubTag = viRoot.tag_name;
+                            return viRoot.tag_name;
+                        default:
+                            return tag;
                     }
                 }
                 catch
@@ -474,8 +535,7 @@ namespace Fragment_Launcher
 
         private DateTime GetLastRelease(string repo)
         {
-            HttpWebRequest request = WebRequest.Create(repo) as HttpWebRequest;
-            if (request != null)
+            if (WebRequest.Create(repo) is HttpWebRequest request)
             {
                 request.Method = "GET";
                 request.UserAgent = "Anything";
@@ -483,21 +543,19 @@ namespace Fragment_Launcher
 
                 try
                 {
-                    using (StreamReader response = new StreamReader(request.GetResponse().GetResponseStream()))
-                    {
+                    using StreamReader response = new StreamReader(request.GetResponse().GetResponseStream());
 
-                        string reader = response.ReadLine();
-                        switch (repo)
-                        {
-                            case aliceGithubReleaseLink:
-                                Release.Root aliceRoot = JsonConvert.DeserializeObject<Release.Root>(reader);
-                                return aliceRoot.published_at;
-                            case viGithubReleaseLink:
-                                Release.Root viRoot = JsonConvert.DeserializeObject<Release.Root>(reader);
-                                return viRoot.published_at;
-                            default:
-                                return DateTime.MinValue;
-                        }
+                    string reader = response.ReadLine();
+                    switch (repo)
+                    {
+                        case aliceGithubReleaseLink:
+                            Release.Root aliceRoot = JsonConvert.DeserializeObject<Release.Root>(reader);
+                            return aliceRoot.published_at;
+                        case viGithubReleaseLink:
+                            Release.Root viRoot = JsonConvert.DeserializeObject<Release.Root>(reader);
+                            return viRoot.published_at;
+                        default:
+                            return DateTime.MinValue;
                     }
                 }
                 catch
@@ -511,7 +569,7 @@ namespace Fragment_Launcher
             }
         }
 
-        private void dialogBox_TextChanged(object sender, EventArgs e)
+        private void DialogBox_TextChanged(object sender, EventArgs e)
         {
             dialogBox.ScrollToCaret();
         }
@@ -520,7 +578,7 @@ namespace Fragment_Launcher
 
         #region Click Button Functions
 
-        private void checkNewVersion_Click(object sender, EventArgs e)
+        private void CheckNewVersion_Click(object sender, EventArgs e)
         {
             UpdateProgress(0);
 
@@ -541,10 +599,8 @@ namespace Fragment_Launcher
             }
         }
 
-        private void chooseIso_Btn_Click(object sender, EventArgs e)
+        private void ChooseIso_Btn_Click(object sender, EventArgs e)
         {
-            var filePath = string.Empty;
-
             using OpenFileDialog openFileDialog = new OpenFileDialog();
             openFileDialog.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
             openFileDialog.Filter = "ISO files (*.iso)|*.iso|All files (*.*)|*.*";
@@ -554,7 +610,7 @@ namespace Fragment_Launcher
             if (openFileDialog.ShowDialog() == DialogResult.OK)
             {
                 //Get the path of specified file
-                filePath = openFileDialog.FileName;
+                var filePath = openFileDialog.FileName;
 
                 isoFilePath.Text = filePath.ToString();
                 md5hash.Text = Get_MD5Hash(filePath);
@@ -562,7 +618,7 @@ namespace Fragment_Launcher
             }
         }
 
-        private void launchButton_Click(object sender, EventArgs e)
+        private void LaunchButton_Click(object sender, EventArgs e)
         {
             progressBar1.Value = 0;
             progressBar1.Update();
@@ -592,82 +648,88 @@ namespace Fragment_Launcher
 
         #region Menu / Status Bar Functions
 
-        private void menuStrip1_ItemClicked(object sender, ToolStripItemClickedEventArgs e)
+        private void MenuStrip1_ItemClicked(object sender, ToolStripItemClickedEventArgs e)
         {
-            saveToolStripMenuItem.Click += new EventHandler(saveToolStripMenuItem_Click);
-            exitToolStripMenuItem.Click += new EventHandler(exitToolStripMenuItem_Click);
-            telliToolStripMenuItem.Click += new EventHandler(telliToolStripMenuItem_Click);
-            pcsx2StripMenuItem1.Click += new EventHandler(pcsx2ToolStripMenuItem_Click);
-            aboutToolStripMenuItem.Click += new EventHandler(aboutToolStripMenuItem_Click);
+            saveToolStripMenuItem.Click += new EventHandler(SaveToolStripMenuItem_Click);
+            exitToolStripMenuItem.Click += new EventHandler(ExitToolStripMenuItem_Click);
+            telliToolStripMenuItem.Click += new EventHandler(TelliToolStripMenuItem_Click);
+            pcsx2StripMenuItem1.Click += new EventHandler(Pcsx2ToolStripMenuItem_Click);
+            aboutToolStripMenuItem.Click += new EventHandler(AboutToolStripMenuItem_Click);
         }
 
-        private void telliToolStripMenuItem_Click(object sender, EventArgs e)
+        private void TelliToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            using (var fbd = new FolderBrowserDialog())
+            using var fbd = new FolderBrowserDialog();
+            DialogResult result = fbd.ShowDialog();
+
+            if (result == DialogResult.OK && !string.IsNullOrWhiteSpace(fbd.SelectedPath))
             {
-                DialogResult result = fbd.ShowDialog();
-
-                if (result == DialogResult.OK && !string.IsNullOrWhiteSpace(fbd.SelectedPath))
-                {
-                    info.Default.telliFolder = fbd.SelectedPath.ToString();
-                    telliToolStripMenuItem.ToolTipText = fbd.SelectedPath.ToString();
-                    telliToolStripMenuItem.Checked = true;
-                }
-
-                toolStripStatusLabel1.Text = "TelliPatch Folder set to " + fbd.SelectedPath.ToString();
-                statusStrip1.Update();
+                info.Default.telliFolder = fbd.SelectedPath.ToString();
+                telliToolStripMenuItem.ToolTipText = fbd.SelectedPath.ToString();
+                telliToolStripMenuItem.Checked = true;
             }
+
+            toolStripStatusLabel1.Text = "TelliPatch folder set to " + fbd.SelectedPath.ToString();
+            statusStrip1.Update();
         }
 
-        private void pcsx2ToolStripMenuItem_Click(object sender, EventArgs e)
+        private void Pcsx2ToolStripMenuItem_Click(object sender, EventArgs e)
         {
             var filePath = string.Empty;
 
-            using (OpenFileDialog openFileDialog = new OpenFileDialog())
+            using OpenFileDialog openFileDialog = new OpenFileDialog();
+            openFileDialog.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            openFileDialog.Filter = "pcsx2.exe file (*.exe)|*.exe|All files (*.*)|*.*";
+            openFileDialog.FilterIndex = 1;
+            openFileDialog.RestoreDirectory = true;
+
+            if (openFileDialog.ShowDialog() == DialogResult.OK)
             {
-                openFileDialog.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-                openFileDialog.Filter = "pcsx2.exe file (*.exe)|*.exe|All files (*.*)|*.*";
-                openFileDialog.FilterIndex = 1;
-                openFileDialog.RestoreDirectory = true;
+                filePath = openFileDialog.FileName;
 
-                if (openFileDialog.ShowDialog() == DialogResult.OK)
-                {
-                    filePath = openFileDialog.FileName;
-
-                    info.Default.pcsx2Folder = filePath.ToString();
-                    pcsx2StripMenuItem1.ToolTipText = filePath.ToString();
-                    pcsx2StripMenuItem1.Checked = true;
-                }
-
-                toolStripStatusLabel1.Text = "PCSX2 Folder set to " + filePath.ToString();
-                statusStrip1.Update();
+                info.Default.pcsx2Folder = filePath.ToString();
+                pcsx2StripMenuItem1.ToolTipText = filePath.ToString();
+                pcsx2StripMenuItem1.Checked = true;
             }
+
+            toolStripStatusLabel1.Text = "PCSX2 Folder set to " + filePath.ToString();
+            statusStrip1.Update();
         }
 
-        private void aboutToolStripMenuItem_Click(object sender, EventArgs e)
+        private void AboutToolStripMenuItem_Click(object sender, EventArgs e)
         {
             new About().Show();
         }
 
-        private void saveToolStripMenuItem_Click(object sender, EventArgs e)
+        private void SaveToolStripMenuItem_Click(object sender, EventArgs e)
         {
             SaveSettings();
         }
 
-        private void exitToolStripMenuItem_Click(object sender, EventArgs e)
+        private void ExitToolStripMenuItem_Click(object sender, EventArgs e)
         {
             // save before closing
             SaveSettings();
             Close();
         }
 
-        private void getTelliPatchToolStripMenuItem_Click(object sender, EventArgs e)
+        private void GetTelliPatchToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            Process.Start(new ProcessStartInfo
+            if(Get_TelliPatchVersion() == String.Empty)
             {
-                FileName = "https://bbs.dothackers.org/viewtopic.php?f=6&t=80&p=262#p262",
-                UseShellExecute = true
-            });
+                Log("Downloading TelliPatch...");
+                DownloadTellipatch();
+            } else
+            {
+                Log($"TelliPatch is already installed. It is located at: {telliToolStripMenuItem.ToolTipText}");
+            }
+        }
+
+        private void debugInfoToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            Log($"Latest Alice Release: {Get_GithubTag(aliceGithubReleaseLink)} (Found: {aliceGithubTag})");
+            Log($"Latest Vi Release: {Get_GithubTag(viGithubReleaseLink)} (Found: {viGithubTag})");
+            Log($"Tellipatch Version {Get_TelliPatchVersion()}");
         }
 
         #endregion Menu / Status Bar Functions

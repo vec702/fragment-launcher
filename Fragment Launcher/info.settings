@@ -15,7 +15,7 @@
       <Value Profile="(Default)" />
     </Setting>
     <Setting Name="viGithubVersion" Type="System.String" Scope="User">
-      <Value Profile="(Default)">0</Value>
+      <Value Profile="(Default)">v0.0</Value>
     </Setting>
     <Setting Name="aliceGithubVersion" Type="System.String" Scope="User">
       <Value Profile="(Default)">v0.0.0</Value>

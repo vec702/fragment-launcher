@@ -5,7 +5,6 @@ namespace Fragment_Launcher
 {
     internal class Release
     {
-        // Root myDeserializedClass = JsonConvert.DeserializeObject<Root>(myJsonResponse); 
         public class Author
         {
             public string login { get; set; }
