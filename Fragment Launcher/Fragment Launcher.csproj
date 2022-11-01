@@ -2,16 +2,17 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
     <RootNamespace>Fragment_Launcher</RootNamespace>
     <UseWindowsForms>true</UseWindowsForms>
     <StartupObject>Fragment_Launcher.Program</StartupObject>
     <ApplicationIcon>oh_no_melon_vector_new.ico</ApplicationIcon>
     <Authors>vector</Authors>
-    <Company>TelliPatch Team</Company>
+    <Company>FragmentLauncher</Company>
     <Product>.hack//fragment Launcher</Product>
     <PackageId>.hack//fragment Launcher</PackageId>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFrameworks />
   </PropertyGroup>
 
   <ItemGroup>

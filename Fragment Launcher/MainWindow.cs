@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -19,13 +20,13 @@ namespace Fragment_Launcher
         private string lastCheckedForNewVersion = string.Empty;
         private string telliPatchVersion = string.Empty;
         private string aliceGithubTag = "v0.0.0";
-        private string viGithubTag = "v0.0.0";
 
         private const string aliceGithubReleaseLink = "https://api.github.com/repos/Tellilum/.hack-fragment-Definitive-Translation/releases/latest";
-        private const string viGithubReleaseLink = "https://api.github.com/repos/Finzenku/FragmentUpdater/releases/latest";
         private const string tellipatchDownloadLink = "https://github.com/robby-u/tellipatch/releases/download/Windows/tellipatch.zip";
         private const string JP_ISO_MD5 = "94C82040BF4BB99500EB557A3C0FBB15";
-        
+
+        private const string GOOGLE_API_KEY = "Generate your own API key, please. :-)";
+
         private readonly Timer timer = new Timer();
         #endregion
 
@@ -42,10 +43,9 @@ namespace Fragment_Launcher
             telliToolStripMenuItem.ToolTipText = info.Default.telliFolder.ToString();
             pcsx2StripMenuItem1.ToolTipText = info.Default.pcsx2Folder.ToString();
             lastCheckedForNewVersion = info.Default.lastCheck.ToString();
-            aliceGithubTag = info.Default.aliceGithubVersion;
-            viGithubTag = info.Default.viGithubVersion;
+            aliceGithubTag = info.Default.aliceGithubVersion.ToString();
 
-            if (telliToolStripMenuItem.ToolTipText != string.Empty)
+            if (Get_TelliPatchVersion() != "Not Installed")
             {
                 telliToolStripMenuItem.Checked = true;
             }
@@ -65,7 +65,7 @@ namespace Fragment_Launcher
                 md5hash.Text = " error - select another ISO";
             }
 
-            if(Get_TelliPatchVersion() != String.Empty)
+            if(Get_TelliPatchVersion() != "Not Installed")
             {
                 getTelliPatchToolStripMenuItem.Checked = true;
                 getTelliPatchToolStripMenuItem.Enabled = false;
@@ -141,8 +141,12 @@ namespace Fragment_Launcher
 
             }
 
-            telliPatchVersion = version;
-            return telliPatchVersion;
+            if (version != String.Empty)
+            {
+                telliPatchVersion = version;
+                return telliPatchVersion;
+            }
+            else return "Not Installed";
         }
 
         private void SaveSettings()
@@ -152,7 +156,6 @@ namespace Fragment_Launcher
             info.Default.pcsx2Folder = pcsx2StripMenuItem1.ToolTipText;
             info.Default.lastCheck = lastCheckedForNewVersion;
             info.Default.aliceGithubVersion = aliceGithubTag;
-            info.Default.viGithubVersion = viGithubTag;
             info.Default.Save();
         }
 
@@ -193,7 +196,7 @@ namespace Fragment_Launcher
             telliToolStripMenuItem.ToolTipText = newpath;
             telliToolStripMenuItem.Checked = true;
 
-            if (Get_TelliPatchVersion() != String.Empty)
+            if (Get_TelliPatchVersion() != "Not Installed")
             {
                 getTelliPatchToolStripMenuItem.Checked = true;
                 getTelliPatchToolStripMenuItem.Enabled = false;
@@ -335,25 +338,22 @@ namespace Fragment_Launcher
                     string aliceTagCleaned = Get_GithubTag(aliceGithubReleaseLink)[1..].Replace(".", string.Empty);
                     string aliceLastSavedData = aliceGithubTag[1..].Replace(".", string.Empty);
 
-                    string viLastSavedData = viGithubTag[1..].Replace(".", string.Empty);
-                    string viTagCleaned = Get_GithubTag(viGithubReleaseLink)[1..].Replace(".", string.Empty);
+                    aliceGithubTag = Get_GithubTag(aliceGithubReleaseLink);
 
                     /*
                      * We need to patch if any of the following criteria are met:
-                     * 1. the last time we ran a check was before a new alice release
-                     * 2. the last time we ran a check was before a new vi release
+                     * 1. the last check recorded was before a new alice release
+                     * 2. the last check recorded was before a change was made in vi's sheet
                      * 3. the iso loaded was created before a new alice release
-                     * 4. the iso loaded was created before a new vi release
-                     * 5. saved alice tag is older than alice's new tag_name
-                     * 6. saved vi tag is older than vi's new tag_name
-                     * 7. the iso loaded is the original jp disc
+                     * 4. the iso loaded was created before a change was made in vi's sheet
+                     * 5. the saved alice release tag is older than alice's newest release tag
+                     * 6. the iso loaded is the original jp disc
                      */
                     if (DateTime.Compare(DateTime.Parse(lastCheckedForNewVersion), GetLastRelease(aliceGithubReleaseLink)) == -1 ||
+                        DateTime.Compare(DateTime.Parse(lastCheckedForNewVersion), Vi_LastModified_DateTime()) == -1 ||
                         DateTime.Compare(File.GetLastWriteTime(isoFilePath.Text), GetLastRelease(aliceGithubReleaseLink)) == -1 ||
-                        DateTime.Compare(DateTime.Parse(lastCheckedForNewVersion), GetLastRelease(viGithubReleaseLink)) == -1 ||
-                        DateTime.Compare(File.GetCreationTime(isoFilePath.Text), GetLastRelease(viGithubReleaseLink)) == -1 ||
+                        DateTime.Compare(File.GetLastWriteTime(isoFilePath.Text), Vi_LastModified_DateTime()) == -1 ||
                         Convert.ToInt32(aliceLastSavedData) < Convert.ToInt32(aliceTagCleaned) ||
-                        Convert.ToInt32(viLastSavedData) < Convert.ToInt32(viTagCleaned) ||
                         md5hash.Text == JP_ISO_MD5)
                     {
                         DialogResult patchNow = MessageBox.Show("A new version was found.\nWould you like to patch now?", ".hack//fragment launcher", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
@@ -496,7 +496,7 @@ namespace Fragment_Launcher
 
         private string Get_GithubTag(string repo)
         {
-            string tag = "v0.0.0";
+            string tag = String.Empty;
             if (WebRequest.Create(repo) is HttpWebRequest request)
             {
                 request.Method = "GET";
@@ -512,12 +512,7 @@ namespace Fragment_Launcher
                     {
                         case aliceGithubReleaseLink:
                             Release.Root aliceRoot = JsonConvert.DeserializeObject<Release.Root>(reader);
-                            aliceGithubTag = aliceRoot.tag_name;
                             return aliceRoot.tag_name;
-                        case viGithubReleaseLink:
-                            Release.Root viRoot = JsonConvert.DeserializeObject<Release.Root>(reader);
-                            viGithubTag = viRoot.tag_name;
-                            return viRoot.tag_name;
                         default:
                             return tag;
                     }
@@ -551,9 +546,6 @@ namespace Fragment_Launcher
                         case aliceGithubReleaseLink:
                             Release.Root aliceRoot = JsonConvert.DeserializeObject<Release.Root>(reader);
                             return aliceRoot.published_at;
-                        case viGithubReleaseLink:
-                            Release.Root viRoot = JsonConvert.DeserializeObject<Release.Root>(reader);
-                            return viRoot.published_at;
                         default:
                             return DateTime.MinValue;
                     }
@@ -567,6 +559,22 @@ namespace Fragment_Launcher
             {
                 return DateTime.MinValue;
             }
+        }
+
+        private DateTime Vi_LastModified_DateTime()
+        {
+            string request = $"https://www.googleapis.com/drive/v3/files/1vQvaTQXel9jUuUt-GwZZCcGi-JKyhm-LE6MKdIXKxIA?fields=modifiedTime&key={GOOGLE_API_KEY}";
+            string data = string.Empty;
+
+            using (WebClient client = new WebClient())
+            {
+                data = client.DownloadString(request);
+            }
+
+            var obj = JObject.Parse(data);
+            DateTime lastModified = DateTime.Parse(obj["modifiedTime"].ToString());
+
+            return lastModified;
         }
 
         private void DialogBox_TextChanged(object sender, EventArgs e)
@@ -698,7 +706,7 @@ namespace Fragment_Launcher
 
         private void AboutToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            new About().Show();
+            new About().ShowDialog();
         }
 
         private void SaveToolStripMenuItem_Click(object sender, EventArgs e)
@@ -715,7 +723,7 @@ namespace Fragment_Launcher
 
         private void GetTelliPatchToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            if(Get_TelliPatchVersion() == String.Empty)
+            if(Get_TelliPatchVersion() == "Not Installed")
             {
                 Log("Downloading TelliPatch...");
                 DownloadTellipatch();
@@ -725,10 +733,10 @@ namespace Fragment_Launcher
             }
         }
 
-        private void debugInfoToolStripMenuItem_Click(object sender, EventArgs e)
+        private void DebugInfoToolStripMenuItem_Click(object sender, EventArgs e)
         {
             Log($"Latest Alice Release: {Get_GithubTag(aliceGithubReleaseLink)} (Found: {aliceGithubTag})");
-            Log($"Latest Vi Release: {Get_GithubTag(viGithubReleaseLink)} (Found: {viGithubTag})");
+            Log($"Latest Vi Modification: {Vi_LastModified_DateTime().ToString()} (Found: {lastCheckedForNewVersion})");
             Log($"Tellipatch Version {Get_TelliPatchVersion()}");
         }
 

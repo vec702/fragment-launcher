@@ -306,7 +306,7 @@ namespace Fragment_Launcher
             this.debugInfoToolStripMenuItem.Name = "debugInfoToolStripMenuItem";
             this.debugInfoToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.debugInfoToolStripMenuItem.Text = "Debug Info";
-            this.debugInfoToolStripMenuItem.Click += new System.EventHandler(this.debugInfoToolStripMenuItem_Click);
+            this.debugInfoToolStripMenuItem.Click += new System.EventHandler(this.DebugInfoToolStripMenuItem_Click);
             // 
             // MainWindow
             // 
